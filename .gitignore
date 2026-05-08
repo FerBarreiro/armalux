@@ -1,0 +1,15 @@
+# Claude Code
+.claude/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Variables de entorno (si se agregan en el futuro)
+.env
+.env.local
+.env.*.local
+
+# Node (si se agrega en el futuro)
+node_modules/
