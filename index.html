@@ -6,6 +6,8 @@
   <title>Armalux · Buscador de Precios</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- Credenciales locales (gitignored) — ver config.example.js -->
+  <script src="config.js"></script>
   <!-- SheetJS: lee archivos XLS/XLSX en el navegador, sin servidor -->
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <!-- Supabase: base de datos + autenticación en la nube -->
@@ -1298,8 +1300,7 @@ const app = {
 /* =====================================================
    SUPABASE — Base de datos + Autenticación
 ===================================================== */
-const SUPABASE_URL = 'https://cbuuhwtderfjbuffjdsy.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_t1GDn2n_-nUDHCNoKbn9LA_ekArcF9t';
+// SUPABASE_URL y SUPABASE_KEY se cargan desde config.js (gitignored)
 let sb = null;
 
 function initSupabase() {

@@ -1,3 +1,6 @@
+# Credenciales locales — NUNCA subir a git
+config.js
+
 # Claude Code
 .claude/
 
