@@ -1540,20 +1540,34 @@ async function syncFromSupabase(silencioso = false) {
   if (btn) { btn.disabled = true; btn.textContent = '⏳ Cargando...'; }
 
   try {
-    const [{ data: provs, error: ep }, { data: prods, error: ed }] = await Promise.all([
-      sb.from('proveedores').select('*').eq('activo', true),
-      sb.from('productos').select('*').eq('activo', true)
-    ]);
+    // Proveedores (pocos, una sola consulta alcanza)
+    const { data: provs, error: ep } = await sb.from('proveedores').select('*').eq('activo', true);
     if (ep) throw ep;
-    if (ed) throw ed;
+
+    // Productos: Supabase devuelve máx 1000 filas por consulta — paginamos de a 1000
+    const PAGE = 1000;
+    let allProds = [];
+    let from = 0;
+    while (true) {
+      const { data: page, error: ed } = await sb
+        .from('productos')
+        .select('*')
+        .eq('activo', true)
+        .range(from, from + PAGE - 1);
+      if (ed) throw ed;
+      if (!page || page.length === 0) break;
+      allProds = allProds.concat(page);
+      if (page.length < PAGE) break;   // última página
+      from += PAGE;
+    }
 
     if (provs && provs.length) {
       app.proveedores = provs;
       localStorage.setItem('ax_proveedores', JSON.stringify(provs));
     }
-    if (prods && prods.length) {
-      app.productos = prods;
-      localStorage.setItem('ax_productos', JSON.stringify(prods));
+    if (allProds.length) {
+      app.productos = allProds;
+      localStorage.setItem('ax_productos', JSON.stringify(allProds));
       app.ultimoFetch = new Date().toISOString();
       localStorage.setItem('ax_ts', app.ultimoFetch);
     }
@@ -1562,7 +1576,7 @@ async function syncFromSupabase(silencioso = false) {
     const q = document.getElementById('search-input')?.value.trim();
     if (q) ejecutarBusqueda(q);
 
-    if (!silencioso) snack(`✅ Sincronizado: ${prods?.length || 0} productos`);
+    if (!silencioso) snack(`✅ Sincronizado: ${allProds.length} productos`);
 
   } catch(err) {
     console.error('syncFromSupabase:', err);
