@@ -951,14 +951,92 @@
     ============================================================ */
     .rep-header {
       display: flex; align-items: flex-start; justify-content: space-between;
-      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 10px;
     }
     .rep-header h2 { font-size: 20px; font-weight: 700; }
     .rep-header-sub { font-size: 13px; color: var(--c-on-surface-var); margin-top: 2px; }
 
-    .rep-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    /* Buscador */
+    .rep-search-wrap { position: relative; margin-bottom: 12px; }
+    .rep-search-input {
+      width: 100%; padding: 11px 44px 11px 16px;
+      font-family: 'Roboto', sans-serif; font-size: 14px;
+      border: 1.5px solid var(--c-outline); border-radius: var(--r-xl);
+      background: white; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .rep-search-input:focus { border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(251,153,28,.18); }
+    .rep-search-ico {
+      position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+      font-size: 18px; color: var(--c-on-surface-var); pointer-events: none;
+    }
+
+    .rep-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+
+    /* Layout principal: lista + sidebar */
+    .rep-layout {
+      display: grid;
+      grid-template-columns: 1fr 300px;
+      gap: 20px;
+      align-items: flex-start;
+    }
 
     .rep-list { display: flex; flex-direction: column; gap: 10px; }
+
+    /* Sidebar historial */
+    .rep-sidebar {
+      position: sticky; top: 54px;
+      max-height: calc(100vh - 80px);
+      display: flex; flex-direction: column;
+      background: white;
+      border: 1px solid var(--c-outline);
+      border-radius: var(--r-lg);
+      box-shadow: var(--elev-1);
+      overflow: hidden;
+    }
+    .rep-sidebar-header {
+      padding: 12px 16px 10px;
+      background: var(--c-header); color: var(--c-on-header);
+      flex-shrink: 0;
+    }
+    .rep-sidebar-header h3 { font-size: 14px; font-weight: 600; margin-bottom: 1px; }
+    .rep-sidebar-header p  { font-size: 11px; color: rgba(255,255,255,.5); }
+    .rep-sidebar-body { flex: 1; overflow-y: auto; }
+
+    /* Sección dentro del sidebar */
+    .rep-sidebar-section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--c-on-surface-var);
+      padding: 10px 14px 4px;
+      position: sticky; top: 0; background: white; z-index: 1;
+      border-bottom: 1px solid var(--c-outline);
+    }
+    .rep-sidebar-section-title span {
+      float: right; font-size: 10px; font-weight: 400;
+      background: var(--c-surface-var); padding: 1px 6px; border-radius: 100px;
+    }
+
+    /* Tarjeta compacta del sidebar */
+    .rep-hist-card {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--c-outline);
+      transition: background .12s;
+    }
+    .rep-hist-card:last-child { border-bottom: none; }
+    .rep-hist-card:hover { background: var(--c-surface-var); }
+    .rep-hist-artefacto { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .rep-hist-cliente { font-size: 12px; color: var(--c-on-surface-var); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .rep-hist-meta { font-size: 11px; color: var(--c-on-surface-var); margin-bottom: 6px; font-family: monospace; }
+    .rep-hist-actions { display: flex; gap: 4px; }
+    .rep-hist-actions .btn { font-size: 11px; padding: 3px 9px; }
+
+    .rep-sidebar-empty { padding: 18px 14px; text-align: center; font-size: 12px; color: var(--c-on-surface-var); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .rep-layout { grid-template-columns: 1fr; }
+      .rep-sidebar { position: static; max-height: 420px; }
+    }
 
     .rep-card {
       background: white;
@@ -992,6 +1070,7 @@
     .rep-badge-listo      { background: #E8F5E9; color: #2E7D32; }
     .rep-badge-entregado  { background: #F5F5F5; color: #757575; }
     .rep-badge-reclamado  { background: #FFEBEE; color: #B71C1C; }
+    .rep-badge-archivado  { background: #ECEFF1; color: #546E7A; }
 
     .rep-card-meta {
       font-size: 12px; color: var(--c-on-surface-var);
@@ -1603,7 +1682,7 @@
       </div>
 
       <!-- Contenido principal -->
-      <div style="max-width:860px; margin:0 auto">
+      <div style="max-width:1200px; margin:0 auto">
 
         <div class="rep-header">
           <div>
@@ -1616,25 +1695,46 @@
           </div>
         </div>
 
-        <!-- Filtros de estado -->
-        <div class="rep-filters" id="rep-filters">
-          <span class="chip active" onclick="filtrarRep(this,'todos')">Todas</span>
-          <span class="chip" onclick="filtrarRep(this,'pendiente')">⏳ Pendiente</span>
-          <span class="chip" onclick="filtrarRep(this,'en_proceso')">🔨 En proceso</span>
-          <span class="chip" onclick="filtrarRep(this,'listo')">✅ Listo</span>
-          <span class="chip" onclick="filtrarRep(this,'reclamado')">⚠️ Reclamado</span>
-          <span class="chip" onclick="filtrarRep(this,'entregado')">📦 Entregado</span>
+        <!-- Buscador -->
+        <div class="rep-search-wrap">
+          <input type="text" class="rep-search-input" id="rep-search"
+            placeholder="Buscar por cliente, artefacto, N° de reparación, DNI..."
+            oninput="renderReparaciones()">
+          <span class="rep-search-ico">🔍</span>
         </div>
 
-        <!-- Lista de reparaciones -->
-        <div class="rep-list" id="rep-list">
-          <div class="empty-state">
-            <div class="es-ico">🔧</div>
-            <h3>Sin reparaciones cargadas</h3>
-            <p>Presioná <strong>+ Nueva reparación</strong> para registrar la primera.</p>
+        <div class="rep-layout">
+
+          <!-- Columna principal: reparaciones activas -->
+          <div>
+            <div class="rep-filters" id="rep-filters">
+              <span class="chip active" onclick="filtrarRep(this,'todos')">Todas</span>
+              <span class="chip" onclick="filtrarRep(this,'pendiente')">⏳ Pendiente</span>
+              <span class="chip" onclick="filtrarRep(this,'en_proceso')">🔨 En proceso</span>
+              <span class="chip" onclick="filtrarRep(this,'listo')">✅ Listo</span>
+              <span class="chip" onclick="filtrarRep(this,'reclamado')">⚠️ Reclamado</span>
+            </div>
+            <div class="rep-list" id="rep-list">
+              <div class="empty-state">
+                <div class="es-ico">🔧</div>
+                <h3>Sin reparaciones cargadas</h3>
+                <p>Presioná <strong>+ Nueva reparación</strong> para registrar la primera.</p>
+              </div>
+            </div>
           </div>
-        </div>
 
+          <!-- Sidebar: historial -->
+          <div class="rep-sidebar">
+            <div class="rep-sidebar-header">
+              <h3>📋 Historial</h3>
+              <p id="rep-hist-label">Entregados y archivados</p>
+            </div>
+            <div class="rep-sidebar-body" id="rep-sidebar-body">
+              <div class="rep-sidebar-empty">Sin historial aún</div>
+            </div>
+          </div>
+
+        </div><!-- /rep-layout -->
       </div>
     </div><!-- /view-reparaciones -->
 
@@ -3514,36 +3614,138 @@ async function cargarReparaciones() {
   }
 }
 
-/** Renderiza la lista filtrada de reparaciones */
+/** Renderiza lista activa + sidebar de historial */
 function renderReparaciones() {
-  const lista  = document.getElementById('rep-list');
-  const label  = document.getElementById('rep-count-label');
+  const lista     = document.getElementById('rep-list');
+  const label     = document.getElementById('rep-count-label');
+  const sideBody  = document.getElementById('rep-sidebar-body');
+  const histLabel = document.getElementById('rep-hist-label');
   if (!lista) return;
 
+  const q      = ((document.getElementById('rep-search')?.value) || '').toLowerCase().trim();
   const filtro = app.filtroRep || 'todos';
-  const reps = filtro === 'todos'
-    ? app.reparaciones
-    : app.reparaciones.filter(r => r.estado === filtro);
 
-  const total   = app.reparaciones.length;
-  const activas = app.reparaciones.filter(r => r.estado !== 'entregado').length;
-  if (label) label.textContent = `${total} total · ${activas} activas`;
-
-  if (!reps.length) {
-    lista.innerHTML = `<div class="empty-state">
-      <div class="es-ico">🔧</div>
-      <h3>${filtro === 'todos' ? 'Sin reparaciones' : 'Sin resultados para este filtro'}</h3>
-      <p>${filtro === 'todos' ? 'Presioná <strong>+ Nueva reparación</strong> para registrar la primera.' : 'Probá con otro filtro de estado.'}</p>
-    </div>`;
-    return;
+  function matchSearch(r) {
+    if (!q) return true;
+    return (r.nombre_cliente || '').toLowerCase().includes(q) ||
+           (r.numero_rep     || '').toLowerCase().includes(q) ||
+           (r.artefacto      || '').toLowerCase().includes(q) ||
+           (r.dni_cliente    || '').toLowerCase().includes(q) ||
+           (r.whatsapp       || '').toLowerCase().includes(q) ||
+           (r.domicilio      || '').toLowerCase().includes(q);
   }
 
-  lista.innerHTML = reps.map(r => repCardHTML(r)).join('');
+  // Lista activa: pendiente, en_proceso, listo, reclamado
+  const ACTIVOS = ['pendiente','en_proceso','listo','reclamado'];
+  let activos = app.reparaciones.filter(r => ACTIVOS.includes(r.estado) && matchSearch(r));
+  if (filtro !== 'todos') activos = activos.filter(r => r.estado === filtro);
+
+  // Historial: entregado + archivado
+  const entregados = app.reparaciones.filter(r => r.estado === 'entregado'  && matchSearch(r));
+  const archivados = app.reparaciones.filter(r => r.estado === 'archivado'  && matchSearch(r));
+
+  // Contadores
+  const totalActivos = app.reparaciones.filter(r => ACTIVOS.includes(r.estado)).length;
+  const totalHist    = app.reparaciones.filter(r => r.estado === 'entregado' || r.estado === 'archivado').length;
+  if (label)     label.textContent    = `${totalActivos} activas · ${totalHist} en historial`;
+  if (histLabel) histLabel.textContent = `${entregados.length + archivados.length} en historial`;
+
+  // Render lista activa
+  if (!activos.length) {
+    const msg = q
+      ? `Sin resultados para <em>"${esc(q)}"</em>`
+      : filtro === 'todos' ? 'Sin reparaciones activas' : `Sin reparaciones en estado "${filtro}"`;
+    lista.innerHTML = `<div class="empty-state">
+      <div class="es-ico">🔧</div>
+      <h3>${msg}</h3>
+      <p>${q ? 'Probá con otra búsqueda.' : 'Las entregadas y archivadas están en el historial →'}</p>
+    </div>`;
+  } else {
+    lista.innerHTML = activos.map(r => repCardHTML(r)).join('');
+  }
+
+  // Render sidebar — entregados y archivados juntos, ordenados por fecha desc
+  const historial = [...entregados, ...archivados].sort((a, b) => {
+    const fa = a.fecha_entrega || a.created_at || '';
+    const fb = b.fecha_entrega || b.created_at || '';
+    return fb.localeCompare(fa);
+  });
+
+  let sideHTML = '';
+  if (historial.length) {
+    sideHTML = historial.map(r => repHistCardHTML(r)).join('');
+  } else {
+    sideHTML = `<div class="rep-sidebar-empty">${
+      q ? 'Sin resultados para esta búsqueda' : 'Las reparaciones entregadas aparecerán aquí'
+    }</div>`;
+  }
+  if (sideBody) sideBody.innerHTML = sideHTML;
+}
+
+/** Tarjeta compacta para el sidebar de historial */
+function repHistCardHTML(r) {
+  const esArchivado = r.estado === 'archivado';
+  const fechaStr    = r.fecha_entrega ? fmtDate(r.fecha_entrega) : fmtDate(r.fecha_ingreso);
+  const numStr      = r.numero_rep ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
+  const clienteParts = [esc(r.nombre_cliente)];
+  if (r.dni_cliente) clienteParts.push(`DNI: ${esc(r.dni_cliente)}`);
+  if (r.whatsapp)    clienteParts.push(`📱 ${esc(r.whatsapp)}`);
+
+  const indicador = esArchivado
+    ? `<span style="font-size:10px;background:#ECEFF1;color:#546E7A;padding:1px 6px;border-radius:100px;font-weight:600;margin-left:6px">📁 Archivado</span>`
+    : `<span style="font-size:10px;background:#E8F5E9;color:#2E7D32;padding:1px 6px;border-radius:100px;font-weight:600;margin-left:6px">📦 Entregado</span>`;
+
+  const acciones = esArchivado
+    ? `<button class="btn btn-secondary btn-sm" onclick="recuperarRep('${r.id}')">🔄 Recuperar</button>`
+    : `<button class="btn btn-secondary btn-sm" onclick="abrirModalRep('${r.id}')">✏️ Ver</button>
+       <button class="btn btn-secondary btn-sm" onclick="abrirModalReclamo('${r.id}')">⚠️</button>
+       <button class="btn btn-secondary btn-sm" onclick="archivarRep('${r.id}')">📁</button>`;
+
+  return `<div class="rep-hist-card" style="${esArchivado ? 'opacity:.65' : ''}">
+    <div class="rep-hist-artefacto">${esc(r.artefacto)}${indicador}</div>
+    <div class="rep-hist-cliente">${clienteParts.join(' · ')}</div>
+    <div class="rep-hist-meta">${numStr} · ${fechaStr}</div>
+    <div class="rep-hist-actions">${acciones}</div>
+  </div>`;
+}
+
+/** Recupera un archivado y lo pone como pendiente */
+async function recuperarRep(id) {
+  if (!sb) { snack('Sin conexión'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { snack('No autenticado'); return; }
+    const { error } = await sb.from('reparaciones')
+      .update({ estado: 'pendiente' })
+      .eq('id', id);
+    if (error) throw error;
+    snack('🔄 Reparación recuperada — vuelve a la lista activa');
+    await cargarReparaciones();
+  } catch(err) {
+    console.error('recuperarRep:', err);
+    snack('❌ No se pudo recuperar');
+  }
+}
+
+/** Archiva una reparación entregada */
+async function archivarRep(id) {
+  if (!sb) { snack('Sin conexión'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { snack('No autenticado'); return; }
+    const { error } = await sb.from('reparaciones').update({ estado: 'archivado' }).eq('id', id);
+    if (error) throw error;
+    snack('📁 Reparación archivada');
+    await cargarReparaciones();
+  } catch(err) {
+    console.error('archivarRep:', err);
+    snack('❌ No se pudo archivar');
+  }
 }
 
 /** Genera el HTML de una tarjeta de reparación */
 function repCardHTML(r) {
-  const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado', reclamado: '⚠️ Reclamado' };
+  const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado', reclamado: '⚠️ Reclamado', archivado: '📁 Archivado' };
   const badgeClass  = `rep-badge rep-badge-${r.estado}`;
 
   // Línea 1: N° reparación + fecha ingreso
@@ -3580,8 +3782,6 @@ function repCardHTML(r) {
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','listo')">✅ Listo</button>`;
   else if (r.estado === 'listo')
     btnAvanzar = `<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregado</button>`;
-  else if (r.estado === 'entregado')
-    btnAvanzar = `<button class="btn btn-sm" style="background:#FFEBEE;color:#B71C1C;border:1px solid #FFCDD2" onclick="abrirModalReclamo('${r.id}')">⚠️ Reclamar</button>`;
   else if (r.estado === 'reclamado')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="abrirModalResolver('${r.id}')">✅ Resolver</button>
       <button class="btn btn-secondary btn-sm" onclick="reingresarRep('${r.id}')">🔄 Reingresar</button>`;
