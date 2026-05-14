@@ -945,6 +945,86 @@
     @media (max-width: 400px) {
       .prov-grid { grid-template-columns: 1fr; }
     }
+
+    /* ============================================================
+       VIEW: REPARACIONES
+    ============================================================ */
+    .rep-header {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+    }
+    .rep-header h2 { font-size: 20px; font-weight: 700; }
+    .rep-header-sub { font-size: 13px; color: var(--c-on-surface-var); margin-top: 2px; }
+
+    .rep-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+
+    .rep-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .rep-card {
+      background: white;
+      border-radius: var(--r-lg);
+      padding: 16px 18px;
+      box-shadow: var(--elev-1);
+      border: 1px solid var(--c-outline);
+      border-left: 4px solid var(--c-outline);
+    }
+    .rep-card.estado-pendiente  { border-left-color: var(--c-warning); }
+    .rep-card.estado-en_proceso { border-left-color: var(--c-info); }
+    .rep-card.estado-listo      { border-left-color: var(--c-success); }
+    .rep-card.estado-entregado  { border-left-color: #9E9E9E; opacity: .72; }
+
+    .rep-card-top {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; margin-bottom: 6px;
+    }
+    .rep-card-left { flex: 1; min-width: 0; }
+    .rep-num   { font-size: 11px; color: var(--c-on-surface-var); margin-bottom: 2px; font-family: monospace; }
+    .rep-artefacto { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+    .rep-cliente   { font-size: 13px; color: var(--c-on-surface-var); }
+
+    .rep-badge {
+      font-size: 11px; font-weight: 600; padding: 3px 10px;
+      border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+    }
+    .rep-badge-pendiente  { background: #FFF3E0; color: #E65100; }
+    .rep-badge-en_proceso { background: #E3F2FD; color: #1565C0; }
+    .rep-badge-listo      { background: #E8F5E9; color: #2E7D32; }
+    .rep-badge-entregado  { background: #F5F5F5; color: #757575; }
+
+    .rep-card-meta {
+      font-size: 12px; color: var(--c-on-surface-var);
+      display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .rep-desperfecto {
+      font-size: 13px; color: var(--c-on-surface);
+      margin-bottom: 10px; line-height: 1.45;
+      background: var(--c-surface-var);
+      padding: 8px 10px; border-radius: var(--r-md);
+    }
+    .rep-solucion {
+      font-size: 13px; color: var(--c-success);
+      margin-bottom: 10px; line-height: 1.45;
+      background: #E8F5E9; padding: 8px 10px; border-radius: var(--r-md);
+    }
+    .rep-card-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .rep-valor { font-size: 14px; font-weight: 700; margin-left: auto; color: var(--c-success); }
+
+    /* Modal reparación — sección separadora */
+    .rep-modal-section {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--c-on-surface-var);
+      margin: 16px 0 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--c-outline);
+    }
+
+    /* Setup SQL */
+    .rep-sql-pre {
+      font-size: 11px; background: #263238; color: #CFD8DC;
+      padding: 14px 16px; border-radius: var(--r-md);
+      overflow-x: auto; line-height: 1.6;
+      font-family: 'Roboto Mono', monospace;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -994,6 +1074,7 @@
       <div class="nav-item"        id="nr-proveedores" onclick="ir('proveedores')"> <span class="ico">🏭</span> Proveedores</div>
       <div class="nav-item"        id="nr-importar"    onclick="ir('importar')">    <span class="ico">📥</span> Importar</div>
       <div class="nav-item"        id="nr-nuevo"       onclick="ir('nuevo')">       <span class="ico">➕</span> Nuevo Artículo</div>
+      <div class="nav-item"        id="nr-reparaciones" onclick="ir('reparaciones')"> <span class="ico">🔧</span> Reparaciones</div>
       <div class="nav-item"        id="nr-config"      onclick="ir('config')">      <span class="ico">⚙️</span> Configuración</div>
     </div>
     <div class="nav-footer">
@@ -1454,6 +1535,75 @@
     </div><!-- /view-producto -->
 
     <!-- ===================================================
+         VIEW: REPARACIONES
+    =================================================== -->
+    <div class="view" id="view-reparaciones">
+
+      <!-- Alerta de configuración inicial (visible si la tabla no existe) -->
+      <div id="rep-setup-alert" style="display:none; max-width:680px; margin:0 auto 20px;">
+        <div class="alert alert-warning">
+          ⚠️ La tabla <strong>reparaciones</strong> no existe aún en Supabase. Ejecutá este SQL en el panel de tu proyecto y recargá la página.
+        </div>
+        <div class="card" style="margin-top:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+            <strong style="font-size:13px">SQL — ejecutar una sola vez en Supabase</strong>
+            <button class="btn btn-secondary btn-sm" onclick="copiarSQL()">📋 Copiar</button>
+          </div>
+          <pre class="rep-sql-pre" id="rep-sql-pre">CREATE TABLE reparaciones (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  numero_rep    TEXT,
+  dni_cliente   TEXT,
+  nombre_cliente TEXT NOT NULL,
+  whatsapp      TEXT,
+  artefacto     TEXT NOT NULL,
+  desperfecto   TEXT,
+  fecha_ingreso DATE NOT NULL DEFAULT CURRENT_DATE,
+  estado        TEXT NOT NULL DEFAULT 'pendiente',
+  solucion      TEXT,
+  valor         NUMERIC,
+  fecha_entrega DATE,
+  notas         TEXT,
+  created_at    TIMESTAMPTZ DEFAULT NOW()
+);</pre>
+        </div>
+      </div>
+
+      <!-- Contenido principal -->
+      <div style="max-width:860px; margin:0 auto">
+
+        <div class="rep-header">
+          <div>
+            <h2>🔧 Reparaciones</h2>
+            <div class="rep-header-sub" id="rep-count-label">Cargando...</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="cargarReparaciones()">🔄 Actualizar</button>
+            <button class="btn btn-primary"   onclick="abrirModalRep()">+ Nueva reparación</button>
+          </div>
+        </div>
+
+        <!-- Filtros de estado -->
+        <div class="rep-filters" id="rep-filters">
+          <span class="chip active" onclick="filtrarRep(this,'todos')">Todas</span>
+          <span class="chip" onclick="filtrarRep(this,'pendiente')">⏳ Pendiente</span>
+          <span class="chip" onclick="filtrarRep(this,'en_proceso')">🔨 En proceso</span>
+          <span class="chip" onclick="filtrarRep(this,'listo')">✅ Listo</span>
+          <span class="chip" onclick="filtrarRep(this,'entregado')">📦 Entregado</span>
+        </div>
+
+        <!-- Lista de reparaciones -->
+        <div class="rep-list" id="rep-list">
+          <div class="empty-state">
+            <div class="es-ico">🔧</div>
+            <h3>Sin reparaciones cargadas</h3>
+            <p>Presioná <strong>+ Nueva reparación</strong> para registrar la primera.</p>
+          </div>
+        </div>
+
+      </div>
+    </div><!-- /view-reparaciones -->
+
+    <!-- ===================================================
          VIEW: CONFIGURACIÓN
     =================================================== -->
     <div class="view" id="view-config">
@@ -1536,6 +1686,7 @@
     <div class="nb-item"        id="nb-proveedores" onclick="ir('proveedores')"> <span class="ico">🏭</span><span>Proveed.</span></div>
     <div class="nb-item"        id="nb-importar"    onclick="ir('importar')">    <span class="ico">📥</span><span>Importar</span></div>
     <div class="nb-item"        id="nb-nuevo"       onclick="ir('nuevo')">       <span class="ico">➕</span><span>Nuevo</span></div>
+    <div class="nb-item"        id="nb-reparaciones" onclick="ir('reparaciones')"> <span class="ico">🔧</span><span>Repair.</span></div>
     <div class="nb-item"        id="nb-config"      onclick="ir('config')">      <span class="ico">⚙️</span><span>Config</span></div>
   </div>
 </nav>
@@ -1545,6 +1696,102 @@
 
 <!-- Snackbar -->
 <div class="snackbar" id="snackbar"></div>
+
+<!-- =====================================================
+     MODAL: NUEVA / EDITAR REPARACIÓN
+===================================================== -->
+<div class="modal-bg" id="modal-rep">
+  <div class="modal-box" style="max-width:600px">
+    <h2 id="modal-rep-titulo">Nueva reparación</h2>
+
+    <input type="hidden" id="rep-id">
+
+    <div class="rep-modal-section">Datos de ingreso</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">N° de reparación *</label>
+        <input type="text" class="form-input" id="rep-numero" placeholder="Ej: 00145">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de ingreso *</label>
+        <input type="date" class="form-input" id="rep-fecha-ingreso">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">DNI del cliente</label>
+        <input type="text" class="form-input" id="rep-dni" placeholder="Ej: 28456789">
+      </div>
+      <div class="form-group">
+        <label class="form-label">WhatsApp</label>
+        <input type="tel" class="form-input" id="rep-whatsapp" placeholder="Ej: 3516123456">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Nombre del cliente *</label>
+      <input type="text" class="form-input" id="rep-nombre" placeholder="Nombre y apellido">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Artefacto a reparar *</label>
+      <input type="text" class="form-input" id="rep-artefacto" placeholder="Ej: Lavarropas Samsung 7kg">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Detalle del desperfecto</label>
+      <textarea class="form-input" id="rep-desperfecto" rows="3"
+        placeholder="Describí el problema que reporta el cliente..."
+        style="resize:vertical"></textarea>
+    </div>
+
+    <div class="rep-modal-section">Resolución (completar al finalizar)</div>
+
+    <div class="form-group">
+      <label class="form-label">Estado</label>
+      <select class="form-select" id="rep-estado">
+        <option value="pendiente">⏳ Pendiente</option>
+        <option value="en_proceso">🔨 En proceso</option>
+        <option value="listo">✅ Listo para entregar</option>
+        <option value="entregado">📦 Entregado</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Qué se arregló / diagnóstico</label>
+      <textarea class="form-input" id="rep-solucion" rows="2"
+        placeholder="Describí qué se reparó o el diagnóstico..."
+        style="resize:vertical"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Valor de la reparación ($)</label>
+        <input type="number" class="form-input" id="rep-valor" placeholder="0.00" step="0.01" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha de entrega</label>
+        <input type="date" class="form-input" id="rep-fecha-entrega">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Notas internas</label>
+      <textarea class="form-input" id="rep-notas" rows="2"
+        placeholder="Notas para el taller (no las ve el cliente)..."
+        style="resize:vertical"></textarea>
+    </div>
+
+    <div id="rep-modal-res" style="margin-bottom:10px"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="cerrarModalRep()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-rep" onclick="guardarReparacion()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
 
 
 <!-- =====================================================
@@ -1564,10 +1811,12 @@ const app = {
   moneda:       '$',      // Prefijo de moneda
   sheetId:      '',       // ID de Google Sheets
   ultimoFetch:  null,     // Fecha del último sync (Date)
-  debounce:     null,     // Timer del debounce de búsqueda
-  otrosData:    null,     // Filas del archivo otros-prov. pendiente de mapeo
-  otrosHeaders: [],       // Encabezados detectados en archivo otros
-  venta:        []        // Ítems de la venta actual: [{id,descripcion,proveedor,precio_unitario,cantidad}]
+  debounce:       null,     // Timer del debounce de búsqueda
+  otrosData:      null,     // Filas del archivo otros-prov. pendiente de mapeo
+  otrosHeaders:   [],       // Encabezados detectados en archivo otros
+  venta:          [],       // Ítems de la venta actual: [{id,descripcion,proveedor,precio_unitario,cantidad}]
+  reparaciones:   [],       // Array de órdenes de reparación
+  filtroRep:      'todos'   // Filtro activo en la vista reparaciones
 };
 
 /* =====================================================
@@ -1714,7 +1963,8 @@ const PROVS_DEFAULT = [
 const TITULOS = {
   venta: 'Ventas', proveedores: 'Proveedores',
   importar: 'Importar Listas', nuevo: 'Nuevo Artículo',
-  config: 'Configuración', producto: 'Detalle de Producto'
+  config: 'Configuración', producto: 'Detalle de Producto',
+  reparaciones: 'Reparaciones'
 };
 
 /* =====================================================
@@ -1771,6 +2021,9 @@ function cargarStorage() {
 
     const venta = localStorage.getItem('ax_venta');
     if (venta) app.venta = JSON.parse(venta);
+
+    const reps = localStorage.getItem('ax_reparaciones');
+    if (reps) app.reparaciones = JSON.parse(reps);
   } catch (e) {
     console.warn('Error leyendo localStorage:', e);
     app.proveedores = JSON.parse(JSON.stringify(PROVS_DEFAULT));
@@ -2001,7 +2254,7 @@ function imprimirVenta() {
    NAVEGACIÓN
 ===================================================== */
 function ir(vista) {
-  ['venta','proveedores','importar','nuevo','config','producto'].forEach(v => {
+  ['venta','proveedores','importar','nuevo','config','producto','reparaciones'].forEach(v => {
     document.getElementById(`view-${v}`).classList.remove('active');
     const nr = document.getElementById(`nr-${v}`);
     const nb = document.getElementById(`nb-${v}`);
@@ -2015,9 +2268,10 @@ function ir(vista) {
   if (nb) nb.classList.add('active');
   document.getElementById('top-title').textContent = TITULOS[vista] || vista;
 
-  if (vista === 'venta')       { renderVenta(); renderChips(); setTimeout(() => document.getElementById('search-input')?.focus(), 50); }
-  if (vista === 'proveedores') renderProveedores();
-  if (vista === 'config')      renderInfoLocal();
+  if (vista === 'venta')         { renderVenta(); renderChips(); setTimeout(() => document.getElementById('search-input')?.focus(), 50); }
+  if (vista === 'proveedores')   renderProveedores();
+  if (vista === 'config')        renderInfoLocal();
+  if (vista === 'reparaciones')  cargarReparaciones();
 }
 
 /* =====================================================
@@ -3095,6 +3349,264 @@ function esc(s) {
 function mostrarRes(id, tipo, html) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = `<div class="alert alert-${tipo}">${html}</div>`;
+}
+
+/* =====================================================
+   REPARACIONES — CRUD + UI
+===================================================== */
+
+/** Carga todas las reparaciones desde Supabase y las renderiza */
+async function cargarReparaciones() {
+  const lista = document.getElementById('rep-list');
+  const label = document.getElementById('rep-count-label');
+  if (lista) lista.innerHTML = '<div style="padding:20px;text-align:center"><div class="spinner"></div></div>';
+
+  // Primero renderizamos con caché local mientras llega Supabase
+  const cached = localStorage.getItem('ax_reparaciones');
+  if (cached) {
+    try { app.reparaciones = JSON.parse(cached); } catch(_) {}
+  }
+  renderReparaciones();
+
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+
+    const { data, error } = await sb
+      .from('reparaciones')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      if (error.code === '42P01') {           // tabla no existe
+        document.getElementById('rep-setup-alert').style.display = 'block';
+        if (label) label.textContent = 'Tabla no configurada';
+      } else {
+        snack('❌ Error al cargar reparaciones');
+      }
+      return;
+    }
+
+    document.getElementById('rep-setup-alert').style.display = 'none';
+    app.reparaciones = data || [];
+    localStorage.setItem('ax_reparaciones', JSON.stringify(app.reparaciones));
+    renderReparaciones();
+
+  } catch(err) {
+    console.error('cargarReparaciones:', err);
+    snack('❌ Error de conexión');
+  }
+}
+
+/** Renderiza la lista filtrada de reparaciones */
+function renderReparaciones() {
+  const lista  = document.getElementById('rep-list');
+  const label  = document.getElementById('rep-count-label');
+  if (!lista) return;
+
+  const filtro = app.filtroRep || 'todos';
+  const reps = filtro === 'todos'
+    ? app.reparaciones
+    : app.reparaciones.filter(r => r.estado === filtro);
+
+  const total   = app.reparaciones.length;
+  const activas = app.reparaciones.filter(r => r.estado !== 'entregado').length;
+  if (label) label.textContent = `${total} total · ${activas} activas`;
+
+  if (!reps.length) {
+    lista.innerHTML = `<div class="empty-state">
+      <div class="es-ico">🔧</div>
+      <h3>${filtro === 'todos' ? 'Sin reparaciones' : 'Sin resultados para este filtro'}</h3>
+      <p>${filtro === 'todos' ? 'Presioná <strong>+ Nueva reparación</strong> para registrar la primera.' : 'Probá con otro filtro de estado.'}</p>
+    </div>`;
+    return;
+  }
+
+  lista.innerHTML = reps.map(r => repCardHTML(r)).join('');
+}
+
+/** Genera el HTML de una tarjeta de reparación */
+function repCardHTML(r) {
+  const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado' };
+  const badgeClass  = `rep-badge rep-badge-${r.estado}`;
+  const fechaIng    = fmtDate(r.fecha_ingreso);
+  const fechaEnt    = r.fecha_entrega ? ` · Entregado: ${fmtDate(r.fecha_entrega)}` : '';
+  const dniStr      = r.dni_cliente ? ` · DNI: ${esc(r.dni_cliente)}` : '';
+  const waStr       = r.whatsapp    ? ` · 📱 ${esc(r.whatsapp)}` : '';
+  const numStr      = r.numero_rep  ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
+
+  const desperfecto = r.desperfecto
+    ? `<div class="rep-desperfecto">🔍 ${esc(r.desperfecto)}</div>` : '';
+  const solucion = r.solucion
+    ? `<div class="rep-solucion">✅ ${esc(r.solucion)}</div>` : '';
+  const valorStr = r.valor
+    ? `<span class="rep-valor">$ ${Number(r.valor).toLocaleString('es-AR', {minimumFractionDigits:2})}</span>` : '';
+
+  // Botón de avance de estado
+  let btnAvanzar = '';
+  if (r.estado === 'pendiente')
+    btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','en_proceso')">🔨 En proceso</button>`;
+  else if (r.estado === 'en_proceso')
+    btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','listo')">✅ Listo</button>`;
+  else if (r.estado === 'listo')
+    btnAvanzar = `<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregar</button>`;
+
+  return `<div class="rep-card estado-${r.estado}">
+    <div class="rep-card-top">
+      <div class="rep-card-left">
+        <div class="rep-num">${numStr}</div>
+        <div class="rep-artefacto">${esc(r.artefacto)}</div>
+        <div class="rep-cliente">${esc(r.nombre_cliente)}${dniStr}${waStr}</div>
+      </div>
+      <span class="${badgeClass}">${estadoLabel[r.estado] || r.estado}</span>
+    </div>
+    <div class="rep-card-meta">
+      <span>📅 Ingreso: ${fechaIng}</span>${fechaEnt ? `<span>${fechaEnt}</span>` : ''}
+    </div>
+    ${desperfecto}${solucion}
+    <div class="rep-card-actions">
+      <button class="btn btn-secondary btn-sm" onclick="abrirModalRep('${r.id}')">✏️ Editar</button>
+      ${btnAvanzar}
+      ${valorStr}
+    </div>
+  </div>`;
+}
+
+/** Filtra por estado y re-renderiza */
+function filtrarRep(chip, estado) {
+  document.querySelectorAll('#rep-filters .chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  app.filtroRep = estado;
+  renderReparaciones();
+}
+
+/** Abre el modal para crear (sin id) o editar (con id) */
+function abrirModalRep(id) {
+  const r = id ? app.reparaciones.find(x => x.id === id) : null;
+  document.getElementById('modal-rep-titulo').textContent = r ? 'Editar reparación' : 'Nueva reparación';
+  document.getElementById('rep-id').value            = r ? r.id : '';
+  document.getElementById('rep-numero').value        = r ? (r.numero_rep   || '') : '';
+  document.getElementById('rep-fecha-ingreso').value = r ? (r.fecha_ingreso|| '') : hoy();
+  document.getElementById('rep-dni').value           = r ? (r.dni_cliente  || '') : '';
+  document.getElementById('rep-whatsapp').value      = r ? (r.whatsapp     || '') : '';
+  document.getElementById('rep-nombre').value        = r ? (r.nombre_cliente|| '') : '';
+  document.getElementById('rep-artefacto').value     = r ? (r.artefacto    || '') : '';
+  document.getElementById('rep-desperfecto').value   = r ? (r.desperfecto  || '') : '';
+  document.getElementById('rep-estado').value        = r ? (r.estado       || 'pendiente') : 'pendiente';
+  document.getElementById('rep-solucion').value      = r ? (r.solucion     || '') : '';
+  document.getElementById('rep-valor').value         = r ? (r.valor        || '') : '';
+  document.getElementById('rep-fecha-entrega').value = r ? (r.fecha_entrega|| '') : '';
+  document.getElementById('rep-notas').value         = r ? (r.notas        || '') : '';
+  document.getElementById('rep-modal-res').innerHTML = '';
+  document.getElementById('modal-rep').classList.add('open');
+}
+
+function cerrarModalRep() {
+  document.getElementById('modal-rep').classList.remove('open');
+}
+
+/** Guarda (crea o actualiza) una reparación en Supabase */
+async function guardarReparacion() {
+  const id     = document.getElementById('rep-id').value.trim();
+  const nombre = document.getElementById('rep-nombre').value.trim();
+  const artef  = document.getElementById('rep-artefacto').value.trim();
+  const fecha  = document.getElementById('rep-fecha-ingreso').value;
+
+  if (!nombre) { mostrarRes('rep-modal-res','error','El nombre del cliente es obligatorio.'); return; }
+  if (!artef)  { mostrarRes('rep-modal-res','error','El artefacto a reparar es obligatorio.'); return; }
+  if (!fecha)  { mostrarRes('rep-modal-res','error','La fecha de ingreso es obligatoria.'); return; }
+
+  const solucion = document.getElementById('rep-solucion').value.trim() || null;
+  const valor    = parseFloat(document.getElementById('rep-valor').value) || null;
+  let   estado   = document.getElementById('rep-estado').value;
+
+  // Si hay diagnóstico y valor, y la reparación aún no está lista/entregada → avanzar a "listo"
+  if (solucion && valor && (estado === 'pendiente' || estado === 'en_proceso')) {
+    estado = 'listo';
+    document.getElementById('rep-estado').value = 'listo';
+  }
+
+  const payload = {
+    numero_rep:     document.getElementById('rep-numero').value.trim()       || null,
+    dni_cliente:    document.getElementById('rep-dni').value.trim()           || null,
+    nombre_cliente: nombre,
+    whatsapp:       document.getElementById('rep-whatsapp').value.trim()      || null,
+    artefacto:      artef,
+    desperfecto:    document.getElementById('rep-desperfecto').value.trim()   || null,
+    fecha_ingreso:  fecha,
+    estado,
+    solucion,
+    valor,
+    fecha_entrega:  document.getElementById('rep-fecha-entrega').value        || null,
+    notas:          document.getElementById('rep-notas').value.trim()         || null,
+  };
+
+  const btn = document.getElementById('btn-guardar-rep');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+
+  try {
+    if (!sb) throw new Error('Sin conexión a Supabase');
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('No autenticado');
+
+    let error;
+    if (id) {
+      ({ error } = await sb.from('reparaciones').update(payload).eq('id', id));
+    } else {
+      ({ error } = await sb.from('reparaciones').insert(payload));
+    }
+    if (error) throw error;
+
+    cerrarModalRep();
+    snack(id ? '✅ Reparación actualizada' : '✅ Reparación registrada');
+    await cargarReparaciones();
+
+  } catch(err) {
+    console.error('guardarReparacion:', err);
+    mostrarRes('rep-modal-res', 'error', `Error: ${err.message || 'No se pudo guardar'}`);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Guardar';
+  }
+}
+
+/** Avanza el estado de una reparación directamente desde la tarjeta */
+async function avanzarEstado(id, nuevoEstado) {
+  if (!sb) { snack('Sin conexión'); return; }
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) { snack('No autenticado'); return; }
+
+    const patch = { estado: nuevoEstado };
+    if (nuevoEstado === 'entregado') patch.fecha_entrega = hoy();
+
+    const { error } = await sb.from('reparaciones').update(patch).eq('id', id);
+    if (error) throw error;
+
+    snack(`✅ Estado actualizado: ${nuevoEstado}`);
+    await cargarReparaciones();
+  } catch(err) {
+    console.error('avanzarEstado:', err);
+    snack('❌ No se pudo actualizar el estado');
+  }
+}
+
+/** Copia el SQL de setup al portapapeles */
+function copiarSQL() {
+  const txt = document.getElementById('rep-sql-pre').textContent;
+  navigator.clipboard.writeText(txt).then(() => snack('📋 SQL copiado al portapapeles'));
+}
+
+/** Devuelve la fecha de hoy en formato YYYY-MM-DD */
+function hoy() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Formatea una fecha DATE (YYYY-MM-DD) a DD/MM/YYYY */
+function fmtDate(s) {
+  if (!s) return '—';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
 }
 
 // Snackbar
