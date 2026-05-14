@@ -972,6 +972,7 @@
     .rep-card.estado-en_proceso { border-left-color: var(--c-info); }
     .rep-card.estado-listo      { border-left-color: var(--c-success); }
     .rep-card.estado-entregado  { border-left-color: #9E9E9E; opacity: .72; }
+    .rep-card.estado-reclamado  { border-left-color: var(--c-error); }
 
     .rep-card-top {
       display: flex; align-items: flex-start; justify-content: space-between;
@@ -990,6 +991,7 @@
     .rep-badge-en_proceso { background: #E3F2FD; color: #1565C0; }
     .rep-badge-listo      { background: #E8F5E9; color: #2E7D32; }
     .rep-badge-entregado  { background: #F5F5F5; color: #757575; }
+    .rep-badge-reclamado  { background: #FFEBEE; color: #B71C1C; }
 
     .rep-card-meta {
       font-size: 12px; color: var(--c-on-surface-var);
@@ -1006,16 +1008,48 @@
       margin-bottom: 10px; line-height: 1.45;
       background: #E8F5E9; padding: 8px 10px; border-radius: var(--r-md);
     }
+    .rep-reclamo {
+      font-size: 13px; color: #B71C1C;
+      margin-bottom: 6px; line-height: 1.45;
+      background: #FFEBEE; padding: 8px 10px; border-radius: var(--r-md);
+    }
+    .rep-resolucion-reclamo {
+      font-size: 13px; color: #1B5E20;
+      margin-bottom: 10px; line-height: 1.45;
+      background: #E8F5E9; padding: 8px 10px; border-radius: var(--r-md);
+    }
+    /* Bloque reclamo dentro del modal de edición */
+    .rep-modal-block-reclamo {
+      background: #FFEBEE;
+      border: 1px solid #FFCDD2;
+    }
+    .rep-modal-block-reclamo .rep-modal-block-title { color: #B71C1C; }
     .rep-card-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .rep-valor { font-size: 14px; font-weight: 700; margin-left: auto; color: var(--c-success); }
 
-    /* Modal reparación — sección separadora */
-    .rep-modal-section {
-      font-size: 11px; font-weight: 600; text-transform: uppercase;
-      letter-spacing: .5px; color: var(--c-on-surface-var);
-      margin: 16px 0 10px; padding-bottom: 6px;
-      border-bottom: 1px solid var(--c-outline);
+    /* Modal reparación — bloques de sección */
+    .rep-modal-block {
+      border-radius: var(--r-lg);
+      padding: 16px 18px;
+      margin-bottom: 14px;
     }
+    .rep-modal-block-cliente {
+      background: #EEF2F7;
+      border: 1px solid #C9D6E8;
+    }
+    .rep-modal-block-rep {
+      background: #FFF8EE;
+      border: 1px solid #F5D9A0;
+    }
+    .rep-modal-block-title {
+      font-size: 12px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .rep-modal-block-cliente .rep-modal-block-title { color: #1D3557; }
+    .rep-modal-block-rep     .rep-modal-block-title { color: #7B4500; }
+    .rep-modal-block .form-input,
+    .rep-modal-block .form-select { background: white; }
 
     /* Setup SQL */
     .rep-sql-pre {
@@ -1588,6 +1622,7 @@
           <span class="chip" onclick="filtrarRep(this,'pendiente')">⏳ Pendiente</span>
           <span class="chip" onclick="filtrarRep(this,'en_proceso')">🔨 En proceso</span>
           <span class="chip" onclick="filtrarRep(this,'listo')">✅ Listo</span>
+          <span class="chip" onclick="filtrarRep(this,'reclamado')">⚠️ Reclamado</span>
           <span class="chip" onclick="filtrarRep(this,'entregado')">📦 Entregado</span>
         </div>
 
@@ -1706,82 +1741,117 @@
 
     <input type="hidden" id="rep-id">
 
-    <div class="rep-modal-section">Datos de ingreso</div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">N° de reparación *</label>
-        <input type="text" class="form-input" id="rep-numero" placeholder="Ej: 00145">
+    <!-- BLOQUE 1: Datos del cliente -->
+    <div class="rep-modal-block rep-modal-block-cliente">
+      <div class="rep-modal-block-title">
+        <span>👤</span> Datos del cliente
       </div>
-      <div class="form-group">
-        <label class="form-label">Fecha de ingreso *</label>
-        <input type="date" class="form-input" id="rep-fecha-ingreso">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">N° de reparación *</label>
+          <input type="text" class="form-input" id="rep-numero" placeholder="Ej: 00145">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de ingreso *</label>
+          <input type="date" class="form-input" id="rep-fecha-ingreso">
+        </div>
       </div>
-    </div>
 
-    <div class="form-row">
       <div class="form-group">
-        <label class="form-label">DNI del cliente</label>
-        <input type="text" class="form-input" id="rep-dni" placeholder="Ej: 28456789">
+        <label class="form-label">Nombre del cliente *</label>
+        <input type="text" class="form-input" id="rep-nombre" placeholder="Nombre y apellido">
       </div>
-      <div class="form-group">
-        <label class="form-label">WhatsApp</label>
-        <input type="tel" class="form-input" id="rep-whatsapp" placeholder="Ej: 3516123456">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">DNI</label>
+          <input type="text" class="form-input" id="rep-dni" placeholder="Ej: 28456789">
+        </div>
+        <div class="form-group">
+          <label class="form-label">WhatsApp</label>
+          <input type="tel" class="form-input" id="rep-whatsapp" placeholder="Ej: 3516123456">
+        </div>
       </div>
-    </div>
 
-    <div class="form-group">
-      <label class="form-label">Nombre del cliente *</label>
-      <input type="text" class="form-input" id="rep-nombre" placeholder="Nombre y apellido">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Artefacto a reparar *</label>
-      <input type="text" class="form-input" id="rep-artefacto" placeholder="Ej: Lavarropas Samsung 7kg">
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Detalle del desperfecto</label>
-      <textarea class="form-input" id="rep-desperfecto" rows="3"
-        placeholder="Describí el problema que reporta el cliente..."
-        style="resize:vertical"></textarea>
-    </div>
-
-    <div class="rep-modal-section">Resolución (completar al finalizar)</div>
-
-    <div class="form-group">
-      <label class="form-label">Estado</label>
-      <select class="form-select" id="rep-estado">
-        <option value="pendiente">⏳ Pendiente</option>
-        <option value="en_proceso">🔨 En proceso</option>
-        <option value="listo">✅ Listo para entregar</option>
-        <option value="entregado">📦 Entregado</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Qué se arregló / diagnóstico</label>
-      <textarea class="form-input" id="rep-solucion" rows="2"
-        placeholder="Describí qué se reparó o el diagnóstico..."
-        style="resize:vertical"></textarea>
-    </div>
-
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Valor de la reparación ($)</label>
-        <input type="number" class="form-input" id="rep-valor" placeholder="0.00" step="0.01" min="0">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Fecha de entrega</label>
-        <input type="date" class="form-input" id="rep-fecha-entrega">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Domicilio</label>
+        <input type="text" class="form-input" id="rep-domicilio" placeholder="Ej: Av. Colón 1234, Córdoba">
       </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Notas internas</label>
-      <textarea class="form-input" id="rep-notas" rows="2"
-        placeholder="Notas para el taller (no las ve el cliente)..."
-        style="resize:vertical"></textarea>
+    <!-- BLOQUE 2: Datos de la reparación -->
+    <div class="rep-modal-block rep-modal-block-rep">
+      <div class="rep-modal-block-title">
+        <span>🔧</span> Datos de la reparación
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Artefacto a reparar *</label>
+        <input type="text" class="form-input" id="rep-artefacto" placeholder="Ej: Lavarropas Samsung 7kg">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Detalle del desperfecto</label>
+        <textarea class="form-input" id="rep-desperfecto" rows="3"
+          placeholder="Describí el problema que reporta el cliente..."
+          style="resize:vertical"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-select" id="rep-estado">
+          <option value="pendiente">⏳ Pendiente</option>
+          <option value="en_proceso">🔨 En proceso</option>
+          <option value="listo">✅ Listo para entregar</option>
+          <option value="entregado">📦 Entregado</option>
+          <option value="reclamado">⚠️ Reclamado</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Qué se arregló / diagnóstico</label>
+        <textarea class="form-input" id="rep-solucion" rows="2"
+          placeholder="Describí qué se reparó o el diagnóstico..."
+          style="resize:vertical"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Valor de la reparación ($)</label>
+          <input type="number" class="form-input" id="rep-valor" placeholder="0.00" step="0.01" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fecha de entrega</label>
+          <input type="date" class="form-input" id="rep-fecha-entrega">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Notas internas</label>
+        <textarea class="form-input" id="rep-notas" rows="2"
+          placeholder="Notas para el taller (no las ve el cliente)..."
+          style="resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <!-- BLOQUE 3: Reclamo (visible solo cuando hay reclamo) -->
+    <div class="rep-modal-block rep-modal-block-reclamo" id="rep-bloque-reclamo" style="display:none">
+      <div class="rep-modal-block-title">
+        <span>⚠️</span> Reclamo
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motivo del reclamo</label>
+        <textarea class="form-input" id="rep-motivo-reclamo" rows="2"
+          placeholder="Describí el problema que reporta el cliente al reingresar..."
+          style="resize:vertical"></textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Resolución del reclamo</label>
+        <textarea class="form-input" id="rep-resolucion-reclamo" rows="2"
+          placeholder="Cómo se resolvió el reclamo..."
+          style="resize:vertical"></textarea>
+      </div>
     </div>
 
     <div id="rep-modal-res" style="margin-bottom:10px"></div>
@@ -1793,6 +1863,51 @@
   </div>
 </div>
 
+
+<!-- Modal: Registrar reclamo -->
+<div class="modal-bg" id="modal-reclamo">
+  <div class="modal-box" style="max-width:480px">
+    <h2>⚠️ Registrar reclamo</h2>
+    <p style="font-size:13px;color:var(--c-on-surface-var);margin-bottom:16px">
+      El artefacto reingresa con un problema vinculado a la reparación anterior.
+      El historial original se conserva.
+    </p>
+    <input type="hidden" id="reclamo-id">
+    <div class="form-group">
+      <label class="form-label">Motivo del reclamo *</label>
+      <textarea class="form-input" id="reclamo-motivo" rows="3"
+        placeholder="Describí el problema que reporta el cliente al reingresar..."
+        style="resize:vertical"></textarea>
+    </div>
+    <div id="reclamo-modal-res" style="margin-bottom:10px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="cerrarModalReclamo()">Cancelar</button>
+      <button class="btn btn-danger"    onclick="guardarReclamo()">⚠️ Registrar reclamo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Resolver reclamo -->
+<div class="modal-bg" id="modal-resolver">
+  <div class="modal-box" style="max-width:480px">
+    <h2>✅ Resolver reclamo</h2>
+    <p style="font-size:13px;color:var(--c-on-surface-var);margin-bottom:16px">
+      Completá la resolución. El estado pasará a <strong>Entregado</strong> y se registrará la fecha de hoy.
+    </p>
+    <input type="hidden" id="resolver-id">
+    <div class="form-group">
+      <label class="form-label">Resolución del reclamo *</label>
+      <textarea class="form-input" id="resolver-resolucion" rows="3"
+        placeholder="Cómo se resolvió el reclamo..."
+        style="resize:vertical"></textarea>
+    </div>
+    <div id="resolver-modal-res" style="margin-bottom:10px"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="cerrarModalResolver()">Cancelar</button>
+      <button class="btn btn-primary"   onclick="guardarResolucionReclamo()">✅ Resolver y entregar</button>
+    </div>
+  </div>
+</div>
 
 <!-- =====================================================
      JAVASCRIPT — toda la lógica de la app
@@ -3428,43 +3543,60 @@ function renderReparaciones() {
 
 /** Genera el HTML de una tarjeta de reparación */
 function repCardHTML(r) {
-  const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado' };
+  const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado', reclamado: '⚠️ Reclamado' };
   const badgeClass  = `rep-badge rep-badge-${r.estado}`;
-  const fechaIng    = fmtDate(r.fecha_ingreso);
-  const fechaEnt    = r.fecha_entrega ? ` · Entregado: ${fmtDate(r.fecha_entrega)}` : '';
-  const dniStr      = r.dni_cliente ? ` · DNI: ${esc(r.dni_cliente)}` : '';
-  const waStr       = r.whatsapp    ? ` · 📱 ${esc(r.whatsapp)}` : '';
-  const numStr      = r.numero_rep  ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
+
+  // Línea 1: N° reparación + fecha ingreso
+  const numPart   = r.numero_rep ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
+  const metaTop   = `${numPart} · 📅 ${fmtDate(r.fecha_ingreso)}`;
+
+  // Línea 2: cliente + teléfono + DNI + domicilio
+  const clienteParts = [esc(r.nombre_cliente)];
+  if (r.whatsapp)    clienteParts.push(`📱 ${esc(r.whatsapp)}`);
+  if (r.dni_cliente) clienteParts.push(`DNI: ${esc(r.dni_cliente)}`);
+  if (r.domicilio)   clienteParts.push(`📍 ${esc(r.domicilio)}`);
+  const clienteLine = clienteParts.join(' · ');
+
+  // Fecha de entrega (solo si está entregado)
+  const fechaEntStr = r.fecha_entrega
+    ? `<span>📦 Entregado: ${fmtDate(r.fecha_entrega)}</span>` : '';
 
   const desperfecto = r.desperfecto
     ? `<div class="rep-desperfecto">🔍 ${esc(r.desperfecto)}</div>` : '';
   const solucion = r.solucion
     ? `<div class="rep-solucion">✅ ${esc(r.solucion)}</div>` : '';
+  const reclamoDiv = r.motivo_reclamo
+    ? `<div class="rep-reclamo">⚠️ <strong>Reclamo:</strong> ${esc(r.motivo_reclamo)}</div>` : '';
+  const resolucionReclamoDiv = r.resolucion_reclamo
+    ? `<div class="rep-resolucion-reclamo">✅ <strong>Resolución reclamo:</strong> ${esc(r.resolucion_reclamo)}</div>` : '';
   const valorStr = r.valor
     ? `<span class="rep-valor">$ ${Number(r.valor).toLocaleString('es-AR', {minimumFractionDigits:2})}</span>` : '';
 
-  // Botón de avance de estado
+  // Botones según estado
   let btnAvanzar = '';
   if (r.estado === 'pendiente')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','en_proceso')">🔨 En proceso</button>`;
   else if (r.estado === 'en_proceso')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','listo')">✅ Listo</button>`;
   else if (r.estado === 'listo')
-    btnAvanzar = `<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregar</button>`;
+    btnAvanzar = `<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregado</button>`;
+  else if (r.estado === 'entregado')
+    btnAvanzar = `<button class="btn btn-sm" style="background:#FFEBEE;color:#B71C1C;border:1px solid #FFCDD2" onclick="abrirModalReclamo('${r.id}')">⚠️ Reclamar</button>`;
+  else if (r.estado === 'reclamado')
+    btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="abrirModalResolver('${r.id}')">✅ Resolver</button>
+      <button class="btn btn-secondary btn-sm" onclick="reingresarRep('${r.id}')">🔄 Reingresar</button>`;
 
   return `<div class="rep-card estado-${r.estado}">
     <div class="rep-card-top">
       <div class="rep-card-left">
-        <div class="rep-num">${numStr}</div>
+        <div class="rep-num">${metaTop}</div>
         <div class="rep-artefacto">${esc(r.artefacto)}</div>
-        <div class="rep-cliente">${esc(r.nombre_cliente)}${dniStr}${waStr}</div>
+        <div class="rep-cliente">${clienteLine}</div>
       </div>
       <span class="${badgeClass}">${estadoLabel[r.estado] || r.estado}</span>
     </div>
-    <div class="rep-card-meta">
-      <span>📅 Ingreso: ${fechaIng}</span>${fechaEnt ? `<span>${fechaEnt}</span>` : ''}
-    </div>
-    ${desperfecto}${solucion}
+    ${fechaEntStr ? `<div class="rep-card-meta">${fechaEntStr}</div>` : ''}
+    ${desperfecto}${solucion}${reclamoDiv}${resolucionReclamoDiv}
     <div class="rep-card-actions">
       <button class="btn btn-secondary btn-sm" onclick="abrirModalRep('${r.id}')">✏️ Editar</button>
       ${btnAvanzar}
@@ -3491,6 +3623,7 @@ function abrirModalRep(id) {
   document.getElementById('rep-dni').value           = r ? (r.dni_cliente  || '') : '';
   document.getElementById('rep-whatsapp').value      = r ? (r.whatsapp     || '') : '';
   document.getElementById('rep-nombre').value        = r ? (r.nombre_cliente|| '') : '';
+  document.getElementById('rep-domicilio').value     = r ? (r.domicilio    || '') : '';
   document.getElementById('rep-artefacto').value     = r ? (r.artefacto    || '') : '';
   document.getElementById('rep-desperfecto').value   = r ? (r.desperfecto  || '') : '';
   document.getElementById('rep-estado').value        = r ? (r.estado       || 'pendiente') : 'pendiente';
@@ -3498,6 +3631,11 @@ function abrirModalRep(id) {
   document.getElementById('rep-valor').value         = r ? (r.valor        || '') : '';
   document.getElementById('rep-fecha-entrega').value = r ? (r.fecha_entrega|| '') : '';
   document.getElementById('rep-notas').value         = r ? (r.notas        || '') : '';
+  document.getElementById('rep-motivo-reclamo').value      = r ? (r.motivo_reclamo     || '') : '';
+  document.getElementById('rep-resolucion-reclamo').value  = r ? (r.resolucion_reclamo || '') : '';
+  // Mostrar bloque reclamo solo si hay datos de reclamo o estado reclamado
+  const tieneReclamo = r && (r.estado === 'reclamado' || r.motivo_reclamo);
+  document.getElementById('rep-bloque-reclamo').style.display = tieneReclamo ? 'block' : 'none';
   document.getElementById('rep-modal-res').innerHTML = '';
   document.getElementById('modal-rep').classList.add('open');
 }
@@ -3533,13 +3671,16 @@ async function guardarReparacion() {
     nombre_cliente: nombre,
     whatsapp:       document.getElementById('rep-whatsapp').value.trim()      || null,
     artefacto:      artef,
+    domicilio:      document.getElementById('rep-domicilio').value.trim()     || null,
     desperfecto:    document.getElementById('rep-desperfecto').value.trim()   || null,
     fecha_ingreso:  fecha,
     estado,
     solucion,
     valor,
-    fecha_entrega:  document.getElementById('rep-fecha-entrega').value        || null,
-    notas:          document.getElementById('rep-notas').value.trim()         || null,
+    fecha_entrega:        document.getElementById('rep-fecha-entrega').value              || null,
+    notas:                document.getElementById('rep-notas').value.trim()               || null,
+    motivo_reclamo:       document.getElementById('rep-motivo-reclamo').value.trim()      || null,
+    resolucion_reclamo:   document.getElementById('rep-resolucion-reclamo').value.trim()  || null,
   };
 
   const btn = document.getElementById('btn-guardar-rep');
@@ -3589,6 +3730,98 @@ async function avanzarEstado(id, nuevoEstado) {
     console.error('avanzarEstado:', err);
     snack('❌ No se pudo actualizar el estado');
   }
+}
+
+/* ---- Reclamo ---- */
+
+function abrirModalReclamo(id) {
+  document.getElementById('reclamo-id').value        = id;
+  document.getElementById('reclamo-motivo').value    = '';
+  document.getElementById('reclamo-modal-res').innerHTML = '';
+  document.getElementById('modal-reclamo').classList.add('open');
+}
+
+function cerrarModalReclamo() {
+  document.getElementById('modal-reclamo').classList.remove('open');
+}
+
+async function guardarReclamo() {
+  const id     = document.getElementById('reclamo-id').value;
+  const motivo = document.getElementById('reclamo-motivo').value.trim();
+  if (!motivo) { mostrarRes('reclamo-modal-res','error','Describí el motivo del reclamo.'); return; }
+
+  const btn = document.querySelector('#modal-reclamo .btn-danger');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('No autenticado');
+    const { error } = await sb.from('reparaciones')
+      .update({ estado: 'reclamado', motivo_reclamo: motivo })
+      .eq('id', id);
+    if (error) throw error;
+    cerrarModalReclamo();
+    snack('⚠️ Reclamo registrado');
+    await cargarReparaciones();
+  } catch(err) {
+    mostrarRes('reclamo-modal-res','error', err.message || 'No se pudo guardar');
+  } finally {
+    btn.disabled = false; btn.textContent = '⚠️ Registrar reclamo';
+  }
+}
+
+/* ---- Resolver reclamo ---- */
+
+function abrirModalResolver(id) {
+  document.getElementById('resolver-id').value            = id;
+  document.getElementById('resolver-resolucion').value    = '';
+  document.getElementById('resolver-modal-res').innerHTML = '';
+  document.getElementById('modal-resolver').classList.add('open');
+}
+
+function cerrarModalResolver() {
+  document.getElementById('modal-resolver').classList.remove('open');
+}
+
+async function guardarResolucionReclamo() {
+  const id         = document.getElementById('resolver-id').value;
+  const resolucion = document.getElementById('resolver-resolucion').value.trim();
+  if (!resolucion) { mostrarRes('resolver-modal-res','error','Describí cómo se resolvió el reclamo.'); return; }
+
+  const btn = document.querySelector('#modal-resolver .btn-primary');
+  btn.disabled = true; btn.textContent = 'Guardando...';
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) throw new Error('No autenticado');
+    const { error } = await sb.from('reparaciones')
+      .update({ estado: 'entregado', resolucion_reclamo: resolucion, fecha_entrega: hoy() })
+      .eq('id', id);
+    if (error) throw error;
+    cerrarModalResolver();
+    snack('✅ Reclamo resuelto — marcado como Entregado');
+    await cargarReparaciones();
+  } catch(err) {
+    mostrarRes('resolver-modal-res','error', err.message || 'No se pudo guardar');
+  } finally {
+    btn.disabled = false; btn.textContent = '✅ Resolver y entregar';
+  }
+}
+
+/* ---- Reingresar (nueva orden con datos del cliente) ---- */
+
+function reingresarRep(id) {
+  const r = app.reparaciones.find(x => x.id === id);
+  if (!r) return;
+  // Abre el modal vacío y pre-carga solo los datos del cliente + artefacto
+  abrirModalRep();
+  document.getElementById('modal-rep-titulo').textContent  = '🔄 Reingreso — ' + esc(r.artefacto);
+  document.getElementById('rep-nombre').value    = r.nombre_cliente || '';
+  document.getElementById('rep-dni').value       = r.dni_cliente    || '';
+  document.getElementById('rep-whatsapp').value  = r.whatsapp       || '';
+  document.getElementById('rep-domicilio').value = r.domicilio      || '';
+  document.getElementById('rep-artefacto').value = r.artefacto      || '';
+  document.getElementById('rep-fecha-ingreso').value = hoy();
+  // El bloque de reclamo no aplica en un reingreso nuevo
+  document.getElementById('rep-bloque-reclamo').style.display = 'none';
 }
 
 /** Copia el SQL de setup al portapapeles */
