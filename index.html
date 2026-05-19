@@ -1097,6 +1097,59 @@
       margin-bottom: 10px; line-height: 1.45;
       background: #E8F5E9; padding: 8px 10px; border-radius: var(--r-md);
     }
+    /* Items dentro del modal */
+    .rep-item-block {
+      background: white;
+      border: 1.5px solid var(--c-outline);
+      border-radius: var(--r-md);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .rep-item-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .rep-item-header span {
+      font-size: 12px; font-weight: 700; color: #7B4500; text-transform: uppercase; letter-spacing: .4px;
+    }
+    .btn-remove-item {
+      background: none; border: none; cursor: pointer;
+      font-size: 16px; color: var(--c-on-surface-var);
+      padding: 2px 4px; border-radius: var(--r-sm);
+      transition: color .15s, background .15s;
+    }
+    .btn-remove-item:hover { color: var(--c-error); background: #FFEBEE; }
+
+    /* Items en la tarjeta */
+    .rep-items-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+    .rep-item-line {
+      background: var(--c-surface-var);
+      border-radius: var(--r-md); padding: 8px 10px;
+      border-left: 3px solid var(--c-outline);
+    }
+    .rep-item-line.item-listo      { border-left-color: var(--c-success); }
+    .rep-item-line.item-en_proceso { border-left-color: var(--c-info); }
+    .rep-item-line.item-pendiente  { border-left-color: var(--c-warning); }
+    .rep-item-line-top {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 3px;
+    }
+    .rep-item-name  { font-size: 13px; font-weight: 600; }
+    .rep-item-badge { font-size: 11px; }
+    .rep-item-detail {
+      font-size: 12px; color: var(--c-on-surface-var); line-height: 1.4; margin-top: 2px;
+    }
+    .rep-item-detail.item-sol { color: var(--c-success); }
+    .rep-item-valor-line {
+      display: flex; justify-content: flex-end;
+      font-size: 13px; font-weight: 700; color: var(--c-success); margin-top: 4px;
+    }
+    .rep-items-total {
+      font-size: 14px; font-weight: 700; color: var(--c-success);
+      text-align: right; padding-top: 6px;
+      border-top: 1px dashed var(--c-outline); margin-top: 4px;
+    }
+
     /* Bloque reclamo dentro del modal de edición */
     .rep-modal-block-reclamo {
       background: #FFEBEE;
@@ -1880,26 +1933,24 @@
       </div>
     </div>
 
-    <!-- BLOQUE 2: Datos de la reparación -->
+    <!-- BLOQUE 2: Artículos a reparar -->
     <div class="rep-modal-block rep-modal-block-rep">
       <div class="rep-modal-block-title">
-        <span>🔧</span> Datos de la reparación
+        <span>🔧</span> Artículos a reparar
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Artefacto a reparar *</label>
-        <input type="text" class="form-input" id="rep-artefacto" placeholder="Ej: Lavarropas Samsung 7kg">
-      </div>
+      <!-- Lista dinámica de ítems -->
+      <div id="rep-items-container"></div>
 
-      <div class="form-group">
-        <label class="form-label">Detalle del desperfecto</label>
-        <textarea class="form-input" id="rep-desperfecto" rows="3"
-          placeholder="Describí el problema que reporta el cliente..."
-          style="resize:vertical"></textarea>
-      </div>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="addItemRow()"
+        style="margin-bottom:16px; width:100%; justify-content:center">
+        + Agregar artículo
+      </button>
 
-      <div class="form-group">
-        <label class="form-label">Estado</label>
+      <div class="divider"></div>
+
+      <div class="form-group" style="margin-top:12px">
+        <label class="form-label">Estado de la orden</label>
         <select class="form-select" id="rep-estado">
           <option value="pendiente">⏳ Pendiente</option>
           <option value="en_proceso">🔨 En proceso</option>
@@ -1910,21 +1961,8 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">Qué se arregló / diagnóstico</label>
-        <textarea class="form-input" id="rep-solucion" rows="2"
-          placeholder="Describí qué se reparó o el diagnóstico..."
-          style="resize:vertical"></textarea>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Valor de la reparación ($)</label>
-          <input type="number" class="form-input" id="rep-valor" placeholder="0.00" step="0.01" min="0">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Fecha de entrega</label>
-          <input type="date" class="form-input" id="rep-fecha-entrega">
-        </div>
+        <label class="form-label">Fecha de entrega</label>
+        <input type="date" class="form-input" id="rep-fecha-entrega">
       </div>
 
       <div class="form-group" style="margin-bottom:0">
@@ -3701,10 +3739,15 @@ function repHistCardHTML(r) {
        <button class="btn btn-secondary btn-sm" onclick="abrirModalReclamo('${r.id}')">⚠️</button>
        <button class="btn btn-secondary btn-sm" onclick="archivarRep('${r.id}')">📁</button>`;
 
+  const items       = getRepItems(r);
+  const artefactos  = items.map(it => esc(it.artefacto)).filter(Boolean).join(', ') || esc(r.artefacto || '—');
+  const total       = items.reduce((s, it) => s + (it.valor || 0), 0);
+  const totalStr    = total > 0 ? ` · $ ${total.toLocaleString('es-AR', {minimumFractionDigits:2})}` : '';
+
   return `<div class="rep-hist-card" style="${esArchivado ? 'opacity:.65' : ''}">
-    <div class="rep-hist-artefacto">${esc(r.artefacto)}${indicador}</div>
+    <div class="rep-hist-artefacto">${artefactos}${indicador}</div>
     <div class="rep-hist-cliente">${clienteParts.join(' · ')}</div>
-    <div class="rep-hist-meta">${numStr} · ${fechaStr}</div>
+    <div class="rep-hist-meta">${numStr} · ${fechaStr}${totalStr}</div>
     <div class="rep-hist-actions">${acciones}</div>
   </div>`;
 }
@@ -3748,33 +3791,41 @@ function repCardHTML(r) {
   const estadoLabel = { pendiente: '⏳ Pendiente', en_proceso: '🔨 En proceso', listo: '✅ Listo', entregado: '📦 Entregado', reclamado: '⚠️ Reclamado', archivado: '📁 Archivado' };
   const badgeClass  = `rep-badge rep-badge-${r.estado}`;
 
-  // Línea 1: N° reparación + fecha ingreso
-  const numPart   = r.numero_rep ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
-  const metaTop   = `${numPart} · 📅 ${fmtDate(r.fecha_ingreso)}`;
+  const items    = getRepItems(r);
+  const numPart  = r.numero_rep ? `Rep. N° ${esc(r.numero_rep)}` : 'Sin número';
+  const metaTop  = `${numPart} · 📅 ${fmtDate(r.fecha_ingreso)}`;
 
-  // Línea 2: cliente + teléfono + DNI + domicilio
   const clienteParts = [esc(r.nombre_cliente)];
   if (r.whatsapp)    clienteParts.push(`📱 ${esc(r.whatsapp)}`);
   if (r.dni_cliente) clienteParts.push(`DNI: ${esc(r.dni_cliente)}`);
   if (r.domicilio)   clienteParts.push(`📍 ${esc(r.domicilio)}`);
   const clienteLine = clienteParts.join(' · ');
 
-  // Fecha de entrega (solo si está entregado)
-  const fechaEntStr = r.fecha_entrega
-    ? `<span>📦 Entregado: ${fmtDate(r.fecha_entrega)}</span>` : '';
+  const itemsHTML = items.map(item => {
+    const itemEstado = (item.solucion && item.valor) ? 'listo' : (item.desperfecto ? 'en_proceso' : 'pendiente');
+    const itemBadge  = { listo: '✅', en_proceso: '🔨', pendiente: '⏳' }[itemEstado];
+    const valorItem  = item.valor
+      ? `<div class="rep-item-valor-line">$ ${Number(item.valor).toLocaleString('es-AR', {minimumFractionDigits:2})}</div>` : '';
+    return `<div class="rep-item-line item-${itemEstado}">
+      <div class="rep-item-line-top">
+        <span class="rep-item-name">${esc(item.artefacto)}</span>
+        <span class="rep-item-badge">${itemBadge}</span>
+      </div>
+      ${item.desperfecto ? `<div class="rep-item-detail">🔍 ${esc(item.desperfecto)}</div>` : ''}
+      ${item.solucion    ? `<div class="rep-item-detail item-sol">✅ ${esc(item.solucion)}</div>` : ''}
+      ${valorItem}
+    </div>`;
+  }).join('');
 
-  const desperfecto = r.desperfecto
-    ? `<div class="rep-desperfecto">🔍 ${esc(r.desperfecto)}</div>` : '';
-  const solucion = r.solucion
-    ? `<div class="rep-solucion">✅ ${esc(r.solucion)}</div>` : '';
+  const total = items.reduce((s, it) => s + (it.valor || 0), 0);
+  const totalHTML = total > 0
+    ? `<div class="rep-items-total">Total: $ ${total.toLocaleString('es-AR', {minimumFractionDigits:2})}</div>` : '';
+
   const reclamoDiv = r.motivo_reclamo
     ? `<div class="rep-reclamo">⚠️ <strong>Reclamo:</strong> ${esc(r.motivo_reclamo)}</div>` : '';
   const resolucionReclamoDiv = r.resolucion_reclamo
     ? `<div class="rep-resolucion-reclamo">✅ <strong>Resolución reclamo:</strong> ${esc(r.resolucion_reclamo)}</div>` : '';
-  const valorStr = r.valor
-    ? `<span class="rep-valor">$ ${Number(r.valor).toLocaleString('es-AR', {minimumFractionDigits:2})}</span>` : '';
 
-  // Botones según estado
   let btnAvanzar = '';
   if (r.estado === 'pendiente')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','en_proceso')">🔨 En proceso</button>`;
@@ -3790,19 +3841,83 @@ function repCardHTML(r) {
     <div class="rep-card-top">
       <div class="rep-card-left">
         <div class="rep-num">${metaTop}</div>
-        <div class="rep-artefacto">${esc(r.artefacto)}</div>
         <div class="rep-cliente">${clienteLine}</div>
       </div>
       <span class="${badgeClass}">${estadoLabel[r.estado] || r.estado}</span>
     </div>
-    ${fechaEntStr ? `<div class="rep-card-meta">${fechaEntStr}</div>` : ''}
-    ${desperfecto}${solucion}${reclamoDiv}${resolucionReclamoDiv}
-    <div class="rep-card-actions">
+    <div class="rep-items-list">${itemsHTML}</div>
+    ${totalHTML}${reclamoDiv}${resolucionReclamoDiv}
+    <div class="rep-card-actions" style="margin-top:8px">
       <button class="btn btn-secondary btn-sm" onclick="abrirModalRep('${r.id}')">✏️ Editar</button>
       ${btnAvanzar}
-      ${valorStr}
     </div>
   </div>`;
+}
+
+/* ---- Manejo de ítems en el modal ---- */
+
+function nuevoItem() {
+  return { id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(), artefacto: '', desperfecto: '', solucion: '', valor: null };
+}
+
+function syncItemsFromDOM() {
+  app.repItems = app.repItems.map((item, i) => ({
+    ...item,
+    artefacto:   (document.getElementById(`ri-artefacto-${i}`)?.value   || '').trim(),
+    desperfecto: (document.getElementById(`ri-desperfecto-${i}`)?.value || '').trim(),
+    solucion:    (document.getElementById(`ri-solucion-${i}`)?.value    || '').trim() || null,
+    valor:       parseFloat(document.getElementById(`ri-valor-${i}`)?.value) || null,
+  }));
+}
+
+function renderItemRows() {
+  const container = document.getElementById('rep-items-container');
+  if (!container) return;
+  container.innerHTML = app.repItems.map((item, i) => `
+    <div class="rep-item-block" id="rep-item-${i}">
+      <div class="rep-item-header">
+        <span>Artículo ${i + 1}</span>
+        ${app.repItems.length > 1
+          ? `<button type="button" class="btn-remove-item" onclick="removeItemRow(${i})" title="Quitar artículo">🗑️</button>`
+          : ''}
+      </div>
+      <div class="form-group">
+        <label class="form-label">Artefacto *</label>
+        <input type="text" class="form-input" id="ri-artefacto-${i}"
+          value="${esc(item.artefacto)}" placeholder="Ej: Plancha de pelo, Velador...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Detalle del desperfecto</label>
+        <textarea class="form-input" id="ri-desperfecto-${i}" rows="2"
+          placeholder="Problema que reporta el cliente..." style="resize:vertical">${esc(item.desperfecto || '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Diagnóstico / Solución</label>
+        <textarea class="form-input" id="ri-solucion-${i}" rows="2"
+          placeholder="Qué se reparó o diagnóstico..." style="resize:vertical">${esc(item.solucion || '')}</textarea>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Valor ($)</label>
+        <input type="number" class="form-input" id="ri-valor-${i}"
+          value="${item.valor || ''}" placeholder="0.00" step="0.01" min="0">
+      </div>
+    </div>
+  `).join('');
+}
+
+function addItemRow() {
+  syncItemsFromDOM();
+  app.repItems.push(nuevoItem());
+  renderItemRows();
+  // Scroll al nuevo ítem
+  const last = document.getElementById(`rep-item-${app.repItems.length - 1}`);
+  if (last) last.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeItemRow(idx) {
+  syncItemsFromDOM();
+  app.repItems.splice(idx, 1);
+  renderItemRows();
 }
 
 /** Filtra por estado y re-renderiza */
@@ -3813,27 +3928,40 @@ function filtrarRep(chip, estado) {
   renderReparaciones();
 }
 
+/** Devuelve los ítems de una reparación con fallback para registros viejos */
+function getRepItems(r) {
+  if (!r) return [];
+  if (r.items && r.items.length > 0) return r.items;
+  // Compatibilidad con registros anteriores al cambio
+  if (r.artefacto) return [{
+    id: 'legacy', artefacto: r.artefacto,
+    desperfecto: r.desperfecto || '', solucion: r.solucion || '', valor: r.valor || null
+  }];
+  return [];
+}
+
 /** Abre el modal para crear (sin id) o editar (con id) */
 function abrirModalRep(id) {
   const r = id ? app.reparaciones.find(x => x.id === id) : null;
   document.getElementById('modal-rep-titulo').textContent = r ? 'Editar reparación' : 'Nueva reparación';
   document.getElementById('rep-id').value            = r ? r.id : '';
-  document.getElementById('rep-numero').value        = r ? (r.numero_rep   || '') : '';
-  document.getElementById('rep-fecha-ingreso').value = r ? (r.fecha_ingreso|| '') : hoy();
-  document.getElementById('rep-dni').value           = r ? (r.dni_cliente  || '') : '';
-  document.getElementById('rep-whatsapp').value      = r ? (r.whatsapp     || '') : '';
+  document.getElementById('rep-numero').value        = r ? (r.numero_rep    || '') : '';
+  document.getElementById('rep-fecha-ingreso').value = r ? (r.fecha_ingreso || '') : hoy();
+  document.getElementById('rep-dni').value           = r ? (r.dni_cliente   || '') : '';
+  document.getElementById('rep-whatsapp').value      = r ? (r.whatsapp      || '') : '';
   document.getElementById('rep-nombre').value        = r ? (r.nombre_cliente|| '') : '';
-  document.getElementById('rep-domicilio').value     = r ? (r.domicilio    || '') : '';
-  document.getElementById('rep-artefacto').value     = r ? (r.artefacto    || '') : '';
-  document.getElementById('rep-desperfecto').value   = r ? (r.desperfecto  || '') : '';
-  document.getElementById('rep-estado').value        = r ? (r.estado       || 'pendiente') : 'pendiente';
-  document.getElementById('rep-solucion').value      = r ? (r.solucion     || '') : '';
-  document.getElementById('rep-valor').value         = r ? (r.valor        || '') : '';
-  document.getElementById('rep-fecha-entrega').value = r ? (r.fecha_entrega|| '') : '';
-  document.getElementById('rep-notas').value         = r ? (r.notas        || '') : '';
-  document.getElementById('rep-motivo-reclamo').value      = r ? (r.motivo_reclamo     || '') : '';
-  document.getElementById('rep-resolucion-reclamo').value  = r ? (r.resolucion_reclamo || '') : '';
-  // Mostrar bloque reclamo solo si hay datos de reclamo o estado reclamado
+  document.getElementById('rep-domicilio').value     = r ? (r.domicilio     || '') : '';
+  document.getElementById('rep-estado').value        = r ? (r.estado        || 'pendiente') : 'pendiente';
+  document.getElementById('rep-fecha-entrega').value = r ? (r.fecha_entrega || '') : '';
+  document.getElementById('rep-notas').value         = r ? (r.notas         || '') : '';
+  document.getElementById('rep-motivo-reclamo').value     = r ? (r.motivo_reclamo     || '') : '';
+  document.getElementById('rep-resolucion-reclamo').value = r ? (r.resolucion_reclamo || '') : '';
+
+  // Ítems: cargar desde r.items (o generar uno vacío para nueva orden)
+  app.repItems = r ? JSON.parse(JSON.stringify(getRepItems(r))) : [];
+  if (app.repItems.length === 0) app.repItems.push(nuevoItem());
+  renderItemRows();
+
   const tieneReclamo = r && (r.estado === 'reclamado' || r.motivo_reclamo);
   document.getElementById('rep-bloque-reclamo').style.display = tieneReclamo ? 'block' : 'none';
   document.getElementById('rep-modal-res').innerHTML = '';
@@ -3848,39 +3976,38 @@ function cerrarModalRep() {
 async function guardarReparacion() {
   const id     = document.getElementById('rep-id').value.trim();
   const nombre = document.getElementById('rep-nombre').value.trim();
-  const artef  = document.getElementById('rep-artefacto').value.trim();
   const fecha  = document.getElementById('rep-fecha-ingreso').value;
 
   if (!nombre) { mostrarRes('rep-modal-res','error','El nombre del cliente es obligatorio.'); return; }
-  if (!artef)  { mostrarRes('rep-modal-res','error','El artefacto a reparar es obligatorio.'); return; }
   if (!fecha)  { mostrarRes('rep-modal-res','error','La fecha de ingreso es obligatoria.'); return; }
 
-  const solucion = document.getElementById('rep-solucion').value.trim() || null;
-  const valor    = parseFloat(document.getElementById('rep-valor').value) || null;
-  let   estado   = document.getElementById('rep-estado').value;
+  // Sincronizar ítems desde el DOM
+  syncItemsFromDOM();
+  const items = app.repItems.filter(it => it.artefacto.trim());
+  if (!items.length) { mostrarRes('rep-modal-res','error','Agregá al menos un artículo a reparar.'); return; }
 
-  // Si hay diagnóstico y valor, y la reparación aún no está lista/entregada → avanzar a "listo"
-  if (solucion && valor && (estado === 'pendiente' || estado === 'en_proceso')) {
+  let estado = document.getElementById('rep-estado').value;
+
+  // Auto-avanzar a "listo" si TODOS los ítems tienen diagnóstico y valor
+  const todosListos = items.every(it => it.solucion && it.valor);
+  if (todosListos && (estado === 'pendiente' || estado === 'en_proceso')) {
     estado = 'listo';
     document.getElementById('rep-estado').value = 'listo';
   }
 
   const payload = {
-    numero_rep:     document.getElementById('rep-numero').value.trim()       || null,
-    dni_cliente:    document.getElementById('rep-dni').value.trim()           || null,
-    nombre_cliente: nombre,
-    whatsapp:       document.getElementById('rep-whatsapp').value.trim()      || null,
-    artefacto:      artef,
-    domicilio:      document.getElementById('rep-domicilio').value.trim()     || null,
-    desperfecto:    document.getElementById('rep-desperfecto').value.trim()   || null,
-    fecha_ingreso:  fecha,
+    numero_rep:         document.getElementById('rep-numero').value.trim()              || null,
+    dni_cliente:        document.getElementById('rep-dni').value.trim()                 || null,
+    nombre_cliente:     nombre,
+    whatsapp:           document.getElementById('rep-whatsapp').value.trim()            || null,
+    domicilio:          document.getElementById('rep-domicilio').value.trim()           || null,
+    fecha_ingreso:      fecha,
     estado,
-    solucion,
-    valor,
-    fecha_entrega:        document.getElementById('rep-fecha-entrega').value              || null,
-    notas:                document.getElementById('rep-notas').value.trim()               || null,
-    motivo_reclamo:       document.getElementById('rep-motivo-reclamo').value.trim()      || null,
-    resolucion_reclamo:   document.getElementById('rep-resolucion-reclamo').value.trim()  || null,
+    items,
+    fecha_entrega:      document.getElementById('rep-fecha-entrega').value              || null,
+    notas:              document.getElementById('rep-notas').value.trim()               || null,
+    motivo_reclamo:     document.getElementById('rep-motivo-reclamo').value.trim()      || null,
+    resolucion_reclamo: document.getElementById('rep-resolucion-reclamo').value.trim()  || null,
   };
 
   const btn = document.getElementById('btn-guardar-rep');
@@ -4018,7 +4145,9 @@ function reingresarRep(id) {
   document.getElementById('rep-dni').value       = r.dni_cliente    || '';
   document.getElementById('rep-whatsapp').value  = r.whatsapp       || '';
   document.getElementById('rep-domicilio').value = r.domicilio      || '';
-  document.getElementById('rep-artefacto').value = r.artefacto      || '';
+  // Pre-cargar artefacto del primer ítem
+  const primerArtefacto = document.getElementById('ri-artefacto-0');
+  if (primerArtefacto) primerArtefacto.value = r.artefacto || '';
   document.getElementById('rep-fecha-ingreso').value = hoy();
   // El bloque de reclamo no aplica en un reingreso nuevo
   document.getElementById('rep-bloque-reclamo').style.display = 'none';
