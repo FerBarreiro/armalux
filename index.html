@@ -3181,7 +3181,12 @@ function ejecutarOtros() {
 
     const get = (campo, fallback) => {
       const ci = leer(campo);
-      return ci !== undefined ? String(row[ci] || '').trim() : (prev[campo] || fallback || '');
+      if (ci !== undefined) {
+        const val = String(row[ci] || '').trim();
+        // Si la celda está vacía, conservar el valor existente en vez de borrarlo
+        return val || prev[campo] || fallback || '';
+      }
+      return prev[campo] || fallback || '';
     };
 
     const costo = leer('costo') !== undefined ? pNum(row[leer('costo')]) : (prev.costo || 0);
