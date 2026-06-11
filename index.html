@@ -1158,6 +1158,8 @@
     .rep-modal-block-reclamo .rep-modal-block-title { color: #B71C1C; }
     .rep-card-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
     .rep-valor { font-size: 14px; font-weight: 700; margin-left: auto; color: var(--c-success); }
+    .btn-whatsapp { background: #25D366; color: #fff; border: none; border-radius: var(--r-sm); padding: 6px 12px; font-size: 13px; font-weight: 500; cursor: pointer; }
+    .btn-whatsapp:hover { background: #1ebe5d; }
 
     /* Modal reparación — bloques de sección */
     .rep-modal-block {
@@ -3836,8 +3838,12 @@ function repCardHTML(r) {
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','en_proceso')">🔨 En proceso</button>`;
   else if (r.estado === 'en_proceso')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="avanzarEstado('${r.id}','listo')">✅ Listo</button>`;
-  else if (r.estado === 'listo')
-    btnAvanzar = `<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregado</button>`;
+  else if (r.estado === 'listo') {
+    const waBtn = r.whatsapp
+      ? `<button class="btn-whatsapp btn-sm" onclick="whatsappRepLista('${r.id}')">📱 WhatsApp</button>`
+      : '';
+    btnAvanzar = `${waBtn}<button class="btn btn-primary btn-sm" onclick="avanzarEstado('${r.id}','entregado')">📦 Entregado</button>`;
+  }
   else if (r.estado === 'reclamado')
     btnAvanzar = `<button class="btn btn-secondary btn-sm" onclick="abrirModalResolver('${r.id}')">✅ Resolver</button>
       <button class="btn btn-secondary btn-sm" onclick="reingresarRep('${r.id}')">🔄 Reingresar</button>`;
@@ -4058,10 +4064,50 @@ async function avanzarEstado(id, nuevoEstado) {
 
     snack(`✅ Estado actualizado: ${nuevoEstado}`);
     await cargarReparaciones();
+    if (nuevoEstado === 'listo') whatsappRepLista(id);
   } catch(err) {
     console.error('avanzarEstado:', err);
     snack('❌ No se pudo actualizar el estado');
   }
+}
+
+/** Abre WhatsApp con mensaje pre-armado para reparación lista */
+function whatsappRepLista(id) {
+  const r = app.reparaciones.find(x => x.id === id);
+  if (!r) return;
+
+  const rawPhone = (r.whatsapp || '').replace(/\D/g, '');
+  if (!rawPhone) { snack('⚠️ Sin número de WhatsApp cargado'); return; }
+
+  // Normalizar número argentino → código internacional 54
+  let phone = rawPhone;
+  if (!phone.startsWith('54')) {
+    if (phone.startsWith('0')) phone = phone.slice(1);
+    phone = '54' + phone;
+  }
+
+  const items = getRepItems(r);
+  const total = items.reduce((s, it) => s + (Number(it.valor) || 0), 0);
+  const totalStr = `$${total.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+  let detalle;
+  if (items.length === 1) {
+    const it = items[0];
+    detalle = `su reparación del *${it.artefacto}* está lista. La reparación implicó *${it.solucion || it.desperfecto || 'servicio técnico'}* y tiene un costo de *${totalStr}*`;
+  } else {
+    const lineas = items.map(it =>
+      `• *${it.artefacto}*: ${it.solucion || it.desperfecto || '-'} ($${Number(it.valor || 0).toLocaleString('es-AR', { minimumFractionDigits: 2 })})`
+    ).join('\n');
+    detalle = `sus reparaciones están listas:\n${lineas}\nEl costo total es de *${totalStr}*`;
+  }
+
+  const fechaHoy = new Date().toLocaleDateString('es-AR');
+  const msg =
+    `Hola *${r.nombre_cliente}*, ${detalle}. ` +
+    `Ya puede retirarlo, de lunes a viernes de 8 a 12.30 y de 15.30 a 19 hs y los sábados de 8.30 a 13 hs. ` +
+    `Recuerde que los electrodomésticos deben retirarse dentro de los 30 días a partir del ${fechaHoy}.`;
+
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 /* ---- Reclamo ---- */
