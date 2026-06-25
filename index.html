@@ -4124,7 +4124,7 @@ function whatsappRepLista(id) {
   const fechaHoy = new Date().toLocaleDateString('es-AR');
   const msg =
     `Hola *${r.nombre_cliente}*, ${detalle}. ` +
-    `Ya puede retirarlo, de lunes a viernes de 8 a 12.30 y de 15.30 a 19 hs y los sábados de 8.30 a 13 hs. ` +
+    `Ya puede retirarlo, de lunes a viernes de 8.30 a 13 y de 15.30 a 19 hs y los sábados de 9 a 13 hs. ` +
     `Recuerde que los electrodomésticos deben retirarse dentro de los 30 días a partir del ${fechaHoy}.`;
 
   window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
